@@ -73,7 +73,14 @@ public class JpaExtension implements Extension {
     this.entityClassesByPersistenceUnitNames = new HashMap<>();
   }
 
-  private final void discoverManagedClasses(@Observes @WithAnnotations({ Converter.class, Entity.class, Embeddable.class, MappedSuperclass.class }) final ProcessAnnotatedType<?> event) {
+  private final void discoverManagedClasses(@Observes
+                                            @WithAnnotations({
+                                              Converter.class,
+                                              Entity.class,
+                                              Embeddable.class,
+                                              MappedSuperclass.class
+                                            })
+                                            final ProcessAnnotatedType<?> event) {
     if (event != null) {
       final AnnotatedType<?> annotatedType = event.getAnnotatedType();
       if (annotatedType != null) {
@@ -102,8 +109,8 @@ public class JpaExtension implements Extension {
             entityClasses.add(entityClass);
           }
         }
-        event.veto(); // entities can't be beans
       }
+      event.veto(); // entities can't be beans
     }
   }
 
