@@ -4,13 +4,13 @@
 
   <groupId>org.microbean</groupId>
   <artifactId>microbean-jpa-cdi</artifactId>
-  <version>0.1.11-SNAPSHOT</version>
+  <version>0.2.0-SNAPSHOT</version>
 
   <parent>
     <groupId>org.microbean</groupId>
     <artifactId>microbean-pluginmanagement-pom</artifactId>
     <version>9</version>
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <name>microBean JPA CDI</name>
@@ -94,13 +94,6 @@
       </dependency>
 
       <dependency>
-        <groupId>org.hibernate</groupId>
-        <artifactId>hibernate-core</artifactId>
-        <version>5.3.7.Final</version>
-        <type>jar</type>
-      </dependency>
-
-      <dependency>
         <groupId>org.microbean</groupId>
         <artifactId>microbean-datasource-cdi-hikaricp</artifactId>
         <version>0.1.4</version>
@@ -116,15 +109,8 @@
 
       <dependency>
         <groupId>org.microbean</groupId>
-        <artifactId>microbean-narayana-jta-cdi</artifactId>
-        <version>0.1.5</version>
-        <type>jar</type>
-      </dependency>
-
-      <dependency>
-        <groupId>org.microbean</groupId>
         <artifactId>microbean-narayana-jta-weld-se</artifactId>
-        <version>0.1.2</version>
+        <version>0.2.3</version>
         <type>jar</type>
       </dependency>
       
@@ -150,6 +136,13 @@
       <scope>test</scope>
     </dependency>
 
+    <dependency>
+      <groupId>org.eclipse.persistence</groupId>
+      <artifactId>org.eclipse.persistence.jpa</artifactId>
+      <type>jar</type>
+      <scope>test</scope>
+    </dependency>
+    
     <dependency>
       <groupId>org.microbean</groupId>
       <artifactId>microbean-weld-se-environment</artifactId>
@@ -178,13 +171,6 @@
       <scope>test</scope>
     </dependency>
     
-    <dependency>
-      <groupId>org.microbean</groupId>
-      <artifactId>microbean-narayana-jta-cdi</artifactId>
-      <type>jar</type>
-      <scope>test</scope>
-    </dependency>
-
 
     <!-- Provided-scoped dependencies. -->
 
@@ -211,30 +197,11 @@
     </dependency>
 
     
-    <!-- Compile-scoped dependencies. -->
-
-    
-    <dependency>
-      <groupId>org.eclipse.persistence</groupId>
-      <artifactId>org.eclipse.persistence.jpa</artifactId>
-      <type>jar</type>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.hibernate</groupId>
-      <artifactId>hibernate-core</artifactId>
-      <type>jar</type>
-      <scope>compile</scope>
-      <optional>true</optional>
-    </dependency>
-    
   </dependencies>
   
   <build>
 
-    <testResources />
+    <testResources/>
     
     <pluginManagement>
       <plugins>
@@ -252,9 +219,11 @@
             </execution>
           </executions>
           <configuration>
+            <addGeneratedAnnotation>true</addGeneratedAnnotation>
             <clearOutputDir>false</clearOutputDir>
             <extension>true</extension>
             <packageName>org.microbean.jpa.jaxb</packageName>
+            <readOnly>true</readOnly>
           </configuration>
         </plugin>
 
@@ -277,11 +246,6 @@
           <version>3.0.0</version>
         </plugin>
         
-        <plugin>
-          <artifactId>maven-scm-plugin</artifactId>
-          <version>1.11.1</version>
-        </plugin>
-
       </plugins>
     </pluginManagement>
     
@@ -329,7 +293,7 @@
     
     <!-- maven-javadoc-plugin properties; see https://maven.apache.org/plugins/maven-javadoc-plugin/javadoc-mojo.html -->
     <doclint>-syntax</doclint>
-    <links>https://microbean.github.io/microbean-development-annotations/apidocs/,http://docs.jboss.org/cdi/api/2.0/,https://javaee.github.io/javaee-spec/javadocs/,https://www.eclipse.org/eclipselink/api/2.7/,https://docs.jboss.org/hibernate/orm/5.3/javadocs/,https://docs.jboss.org/weld/javadoc/3.0/weld-spi/</links>
+    <links>https://microbean.github.io/microbean-development-annotations/apidocs/,http://docs.jboss.org/cdi/api/2.0/,https://javaee.github.io/javaee-spec/javadocs/</links>
     <stylesheetfile>css/stylesheet.css</stylesheetfile>
 
   </properties>

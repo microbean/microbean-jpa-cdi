@@ -16,6 +16,10 @@
  */
 package org.microbean.jpa.cdi;
 
+import java.io.IOException;
+
+import java.net.URL;
+
 import java.util.Collection;
 
 import javax.persistence.spi.PersistenceUnitInfo;
@@ -55,6 +59,13 @@ public class TestPersistenceXmlLoading {
     assertNotNull(persistenceUnit);
     final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
     assertNull(excludeUnlistedClasses);
+  }
+
+  @Test
+  public void testUrlNormalization() throws IOException {
+    final URL url = new URL("file:/foo/META-INF/persistence.xml");
+    final URL relative = new URL(url, "..");
+    assertEquals("file:/foo/", relative.toString());
   }
 
 }
