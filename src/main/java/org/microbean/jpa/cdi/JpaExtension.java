@@ -16,6 +16,8 @@
  */
 package org.microbean.jpa.cdi;
 
+import java.io.BufferedInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 
 import java.net.URL;
@@ -67,6 +69,10 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+
 import org.microbean.jpa.jaxb.Persistence;
 
 /**
@@ -88,15 +94,15 @@ public class JpaExtension implements Extension {
    * Static fields.
    */
 
-  
+
   private static final String JAXB_GENERATED_PACKAGE_NAME = "org.microbean.jpa.jaxb";
-  
+
 
   /*
    * Instance fields.
    */
 
-  
+
   /**
    * A {@link Map} of {@link Set}s of {@link Class}es whose keys are
    * persistence unit names and whose values are {@link Set}s of
@@ -116,7 +122,7 @@ public class JpaExtension implements Extension {
    * Constructors.
    */
 
-  
+
   /**
    * Creates a new {@link JpaExtension}.
    */
@@ -129,7 +135,7 @@ public class JpaExtension implements Extension {
   /*
    * Instance methods.
    */
-  
+
 
   private final void discoverManagedClasses(@Observes
                                             @WithAnnotations({
@@ -173,7 +179,7 @@ public class JpaExtension implements Extension {
   }
 
   private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event, final BeanManager beanManager)
-    throws IOException, JAXBException, ReflectiveOperationException {
+    throws IOException, JAXBException, ReflectiveOperationException, XMLStreamException {
     if (event != null && beanManager != null) {
 
       // Add a bean for PersistenceProviderResolver.
@@ -218,7 +224,7 @@ public class JpaExtension implements Extension {
           }
         }
       }
-      
+
       // Discover all META-INF/persistence.xml resources, load them
       // using JAXB, and turn them into PersistenceUnitInfo instances,
       // and add beans for all of them as well as their associated
@@ -233,34 +239,49 @@ public class JpaExtension implements Extension {
         } else {
           tempClassLoaderSupplier = () -> classLoader;
         }
+        // We use StAX for XML loading because it is the same strategy
+        // used by CDI implementations.  If the end user wants to
+        // customize the StAX implementation then we want that
+        // customization to apply here as well.
+        final XMLInputFactory xmlInputFactory = XMLInputFactory.newFactory();
+        assert xmlInputFactory != null;
         final Unmarshaller unmarshaller =
           JAXBContext.newInstance(JAXB_GENERATED_PACKAGE_NAME).createUnmarshaller();
         assert unmarshaller != null;
         while (urls.hasMoreElements()) {
           final URL url = urls.nextElement();
-          final Collection<? extends PersistenceUnitInfo> persistenceUnitInfos =
-            PersistenceUnitInfoBean.fromPersistence((Persistence)unmarshaller.unmarshal(url),
-                                                    classLoader,
-                                                    tempClassLoaderSupplier,
-                                                    new URL(url, ".."), // e.g. META-INF/..
-                                                    this.unlistedManagedClassesByPersistenceUnitNames,
-                                                    (jta, useDefaultJta, dataSourceName) -> getDataSource(jta, useDefaultJta, dataSourceName, beanManager));
-          for (final PersistenceUnitInfo persistenceUnitInfo : persistenceUnitInfos) {
-            assert persistenceUnitInfo != null;
+          assert url != null;
+          Collection<? extends PersistenceUnitInfo> persistenceUnitInfos = null;
+          try (final InputStream inputStream = new BufferedInputStream(url.openStream())) {
+            final XMLStreamReader reader = xmlInputFactory.createXMLStreamReader(inputStream);
+            assert reader != null;
+            persistenceUnitInfos =
+              PersistenceUnitInfoBean.fromPersistence((Persistence)unmarshaller.unmarshal(reader),
+                                                      classLoader,
+                                                      tempClassLoaderSupplier,
+                                                      new URL(url, ".."), // e.g. META-INF/..
+                                                      this.unlistedManagedClassesByPersistenceUnitNames,
+                                                      (jta, useDefaultJta, dataSourceName) ->
+                                                        getDataSource(jta, useDefaultJta, dataSourceName, beanManager));
+          }
+          if (persistenceUnitInfos != null && !persistenceUnitInfos.isEmpty()) {
+            for (final PersistenceUnitInfo persistenceUnitInfo : persistenceUnitInfos) {
+              assert persistenceUnitInfo != null;
 
-            String persistenceUnitName = persistenceUnitInfo.getPersistenceUnitName();
-            if (persistenceUnitName == null) {
-              persistenceUnitName = "";
+              String persistenceUnitName = persistenceUnitInfo.getPersistenceUnitName();
+              if (persistenceUnitName == null) {
+                persistenceUnitName = "";
+              }
+
+              event.addBean()
+                .types(Collections.singleton(PersistenceUnitInfo.class))
+                .scope(Singleton.class)
+                .addQualifiers(NamedLiteral.of(persistenceUnitName))
+                .createWith(cc -> persistenceUnitInfo);
+
+              maybeAddPersistenceProviderBean(event, persistenceUnitInfo, providers);
+
             }
-
-            event.addBean()
-              .types(Collections.singleton(PersistenceUnitInfo.class))
-              .scope(Singleton.class)
-              .addQualifiers(NamedLiteral.of(persistenceUnitName))
-              .createWith(cc -> persistenceUnitInfo);
-
-            maybeAddPersistenceProviderBean(event, persistenceUnitInfo, providers);
-            
           }
         }
       }
@@ -277,7 +298,7 @@ public class JpaExtension implements Extension {
     if (providerClassName != null) {
 
       boolean add = true;
-      
+
       if (providers != null && !providers.isEmpty()) {
         for (final PersistenceProvider provider : providers) {
           if (provider != null && provider.getClass().getName().equals(providerClassName)) {
@@ -288,7 +309,7 @@ public class JpaExtension implements Extension {
       }
 
       if (add) {
-      
+
         // The PersistenceProvider class in question is not one we
         // already loaded.  Add a bean for it too.
         event.addBean()
@@ -309,7 +330,7 @@ public class JpaExtension implements Extension {
               }
             });
       }
-      
+
     }
   }
 
