@@ -29,6 +29,7 @@ import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import javax.persistence.SharedCacheMode;
@@ -57,6 +58,12 @@ import org.microbean.jpa.jaxb.Persistence.PersistenceUnit;
  */
 public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
 
+
+  /*
+   * Instance fields.
+   */
+
+  
   private final ClassLoader classLoader;
 
   private final ClassLoader originalClassLoader;
@@ -87,11 +94,79 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
 
   private final SharedCacheMode sharedCacheMode;
 
+  private final Consumer<? super ClassTransformer> classTransformerConsumer;
+
   private final Supplier<? extends ClassLoader> tempClassLoaderSupplier;
 
   private final PersistenceUnitTransactionType transactionType;
   
   private final ValidationMode validationMode;
+
+
+  /*
+   * Constructors.
+   */
+  
+
+  /**
+   * Creates a new {@link PersistenceUnitInfoBean} using as many
+   * defaults as reasonably possible.
+   *
+   * @param persistenceUnitName the name of the persistence unit this
+   * {@link PersistenceUnitInfoBean} represents; must not be {@code
+   * null}
+   *
+   * @param persitenceUnitRootUrl the {@link URL} identifying the root
+   * of the persistence unit this {@link PersistenceUnitInfoBean}
+   * represents; must not be {@code null}
+   *
+   * @param managedClassNames a {@link Collection} of fully-qualified
+   * class names identifying JPA-managed classes (such as entity
+   * classes, mapped superclasses and the like); may be {@code null}.
+   * The {@link Collection} is copied and no reference to it is
+   * retained.
+   *
+   * @param dataSourceProvider a {@link DataSourceProvider} capable of
+   * supplying {@link DataSource} instances; must not be {@code null}
+   *
+   * @param properties a {@link Properties} object representing the
+   * properties of the persistence unit represented by this {@link
+   * PersistenceUnitInfoBean}; may be {@code null}.  A reference is
+   * retained to this object.
+   *
+   * @exception NullPointerException if {@code persistenceUnitName},
+   * {@code persistenceUnitRootUrl} or {@code dataSourceProvider} is
+   * {@code null}
+   *
+   * @see #PersistenceUnitInfoBean(String, URL, String, String,
+   * ClassLoader, Supplier, Consumer, boolean, Collection, Collection,
+   * Collection, String, String, DataSourceProvider, Properties,
+   * SharedCacheMode, PersistenceUnitTransactionType, ValidationMode)
+   */
+  public PersistenceUnitInfoBean(final String persistenceUnitName,
+                                 final URL persistenceUnitRootUrl,
+                                 final Collection<? extends String> managedClassNames,
+                                 final DataSourceProvider dataSourceProvider,
+                                 final Properties properties) {
+    this(persistenceUnitName,
+         persistenceUnitRootUrl,
+         null,
+         null,
+         Thread.currentThread().getContextClassLoader(),
+         null,
+         null,
+         managedClassNames != null && !managedClassNames.isEmpty(),
+         null,
+         managedClassNames,
+         null,
+         persistenceUnitName,
+         null,
+         dataSourceProvider,
+         properties,
+         SharedCacheMode.UNSPECIFIED,
+         PersistenceUnitTransactionType.JTA,
+         ValidationMode.AUTO);
+  }
 
   /**
    * Creates a new {@link PersistenceUnitInfoBean}.
@@ -118,6 +193,11 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
    * @param tempClassLoaderSupplier a {@link Supplier} of {@link
    * ClassLoader} instances to be used by the {@link
    * #getNewTempClassLoader()} method; may be {@code null}
+   *
+   * @param classTransformerConsumer a {@link Consumer} of any {@link
+   * ClassTransformer}s that may be added via a JPA provider's
+   * invocation of the {@link #addTransformer(ClassTransformer)}
+   * method; may be {@code null} in which case no action will be taken
    *
    * @param excludeUnlistedClasses if {@code true}, then any
    * automatically discovered managed classes not explicitly contained
@@ -167,8 +247,9 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
    * PersistenceUnitInfoBean} will use; may be {@code null} in which
    * case {@link ValidationMode#AUTO} will be used instead
    *
-   * @exception NullPointerException if {@code persistenceUnitName} or
-   * {@code persistenceUnitRootUrl} is {@code null}
+   * @exception NullPointerException if {@code persistenceUnitName},
+   * {@code persistenceUnitRootUrl} or {@code dataSourceProvider} is
+   * {@code null}
    *
    * @see #getPersistenceUnitName()
    *
@@ -208,6 +289,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
                                  final String persistenceProviderClassName,
                                  final ClassLoader classLoader,
                                  final Supplier<? extends ClassLoader> tempClassLoaderSupplier,
+                                 final Consumer<? super ClassTransformer> classTransformerConsumer,
                                  final boolean excludeUnlistedClasses,
                                  final Collection<? extends URL> jarFileUrls,
                                  final Collection<? extends String> managedClassNames,
@@ -220,9 +302,10 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
                                  final PersistenceUnitTransactionType transactionType,
                                  final ValidationMode validationMode) {
     super();
-    Objects.requireNonNull(dataSourceProvider);
     Objects.requireNonNull(persistenceUnitName);
     Objects.requireNonNull(persistenceUnitRootUrl);
+    Objects.requireNonNull(dataSourceProvider);
+    Objects.requireNonNull(transactionType);
     
     this.persistenceUnitName = persistenceUnitName;
     this.persistenceUnitRootUrl = persistenceUnitRootUrl;
@@ -231,6 +314,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     this.originalClassLoader = classLoader;
     this.classLoader = classLoader;
     this.tempClassLoaderSupplier = tempClassLoaderSupplier;
+    this.classTransformerConsumer = classTransformerConsumer;
     this.excludeUnlistedClasses = excludeUnlistedClasses;
     
     if (jarFileUrls == null || jarFileUrls.isEmpty()) {
@@ -266,7 +350,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     } else {
       this.sharedCacheMode = sharedCacheMode;
     }
-    this.transactionType = Objects.requireNonNull(transactionType);
+    this.transactionType = transactionType;
     if (validationMode == null) {
       this.validationMode = ValidationMode.AUTO;
     } else {
@@ -274,6 +358,12 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     }
   }
 
+
+  /*
+   * Instance methods.
+   */
+
+  
   @Override
   public List<URL> getJarFileUrls() {
     return this.jarFileUrls;
@@ -359,6 +449,9 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
     //
     // There is also an unspoken assumption that this method will be
     // called only once, if ever.
+    if (this.classTransformerConsumer != null) {
+      this.classTransformerConsumer.accept(classTransformer);
+    }
   }
 
   @Override
@@ -691,6 +784,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
                                   persistenceUnit.getProvider(),
                                   classLoader,
                                   tempClassLoaderSupplier,
+                                  null, // no consuming of ClassTransformer for now
                                   excludeUnlistedClasses == null ? true : excludeUnlistedClasses,
                                   jarFileUrls,
                                   managedClasses,

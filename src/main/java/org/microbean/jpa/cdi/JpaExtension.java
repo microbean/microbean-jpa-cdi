@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 
 import javax.enterprise.event.Observes;
 
+import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.CreationException;
 
 import javax.enterprise.inject.literal.NamedLiteral;
@@ -248,6 +249,11 @@ public class JpaExtension implements Extension {
         final Unmarshaller unmarshaller =
           JAXBContext.newInstance(JAXB_GENERATED_PACKAGE_NAME).createUnmarshaller();
         assert unmarshaller != null;
+        // Normally we'd let CDI instantiate this guy but we are
+        // forbidden from getting references at this stage in the
+        // lifecycle.  Instantiating this provider by hand is fine as
+        // there is no state retained.
+        final PersistenceUnitInfoBean.DataSourceProvider dataSourceProvider = new BeanManagerBackedDataSourceProvider(beanManager);
         while (urls.hasMoreElements()) {
           final URL url = urls.nextElement();
           assert url != null;
@@ -261,8 +267,7 @@ public class JpaExtension implements Extension {
                                                       tempClassLoaderSupplier,
                                                       new URL(url, ".."), // e.g. META-INF/..
                                                       this.unlistedManagedClassesByPersistenceUnitNames,
-                                                      (jta, useDefaultJta, dataSourceName) ->
-                                                        getDataSource(jta, useDefaultJta, dataSourceName, beanManager));
+                                                      dataSourceProvider);
           }
           if (persistenceUnitInfos != null && !persistenceUnitInfos.isEmpty()) {
             for (final PersistenceUnitInfo persistenceUnitInfo : persistenceUnitInfos) {
@@ -332,32 +337,6 @@ public class JpaExtension implements Extension {
       }
 
     }
-  }
-
-  private static final DataSource getDataSource(final boolean jta, final boolean useDefaultJta, final String dataSourceName, final BeanManager beanManager) {
-    Objects.requireNonNull(beanManager);
-    final Bean<?> bean;
-    if (jta) {
-      if (useDefaultJta) {
-        // Ignore, on purpose, the supplied dataSourceName.
-        bean = beanManager.resolve(beanManager.getBeans(DataSource.class));
-      } else if (dataSourceName == null) {
-        bean = null;
-      } else {
-        bean = beanManager.resolve(beanManager.getBeans(DataSource.class, NamedLiteral.of(dataSourceName)));
-      }
-    } else if (dataSourceName == null) {
-      bean = null;
-    } else {
-      bean = beanManager.resolve(beanManager.getBeans(DataSource.class, NamedLiteral.of(dataSourceName)));
-    }
-    final DataSource returnValue;
-    if (bean == null) {
-      returnValue = null;
-    } else {
-      returnValue = (DataSource)beanManager.getReference(bean, DataSource.class, beanManager.createCreationalContext(bean));
-    }
-    return returnValue;
   }
 
 }

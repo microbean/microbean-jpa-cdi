@@ -17,10 +17,12 @@
 package org.microbean.jpa.cdi;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.net.URL;
 
 import java.util.Collection;
+import java.util.Map;
 
 import javax.persistence.spi.PersistenceUnitInfo;
 
@@ -34,9 +36,12 @@ import org.junit.Test;
 import org.microbean.jpa.jaxb.Persistence;
 import org.microbean.jpa.jaxb.Persistence.PersistenceUnit;
 
+import org.yaml.snakeyaml.Yaml;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class TestPersistenceXmlLoading {
 
@@ -45,7 +50,7 @@ public class TestPersistenceXmlLoading {
   }
 
   @Test
-  public void testLoading() throws JAXBException {
+  public void testLoadingXml() throws JAXBException {
     final JAXBContext jaxbContext = JAXBContext.newInstance("org.microbean.jpa.jaxb");
     assertNotNull(jaxbContext);
     final Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
@@ -59,6 +64,26 @@ public class TestPersistenceXmlLoading {
     assertNotNull(persistenceUnit);
     final Boolean excludeUnlistedClasses = persistenceUnit.isExcludeUnlistedClasses();
     assertNull(excludeUnlistedClasses);
+  }
+
+  @Test
+  public void testLoadingYaml() throws IOException {
+    final URL url = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getSimpleName() + "/persistence.yaml");
+    final Yaml yaml = new Yaml();
+    try (final InputStream inputStream = url.openStream()) {
+      final Map<String, Object> data = yaml.load(inputStream);
+      assertNotNull(data);
+      assertEquals(1, data.size());
+      assertTrue(data.containsKey("units"));
+      @SuppressWarnings("unchecked")
+      final Collection<Map<String, Object>> units = (Collection<Map<String, Object>>)data.get("units");
+      assertNotNull(units);
+      assertEquals(2, units.size());
+      for (final Map<String, Object> unit : units) {
+        assertNotNull(unit);
+        assertTrue(unit.containsKey("name"));
+      }
+    }
   }
 
   @Test
