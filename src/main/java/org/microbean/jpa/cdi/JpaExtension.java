@@ -35,9 +35,12 @@ import java.util.Set;
 
 import java.util.function.Supplier;
 
+import javax.annotation.Priority;
+
 import javax.enterprise.event.Observes;
 
-import javax.enterprise.inject.spi.CDI;
+import javax.enterprise.inject.Any;
+
 import javax.enterprise.inject.CreationException;
 
 import javax.enterprise.inject.literal.NamedLiteral;
@@ -46,6 +49,7 @@ import javax.enterprise.inject.spi.AfterBeanDiscovery;
 import javax.enterprise.inject.spi.AnnotatedType;
 import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
+import javax.enterprise.inject.spi.CDI;
 import javax.enterprise.inject.spi.Extension;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
 import javax.enterprise.inject.spi.WithAnnotations;
@@ -75,6 +79,8 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 import org.microbean.jpa.jaxb.Persistence;
+
+import static javax.interceptor.Interceptor.Priority.LIBRARY_AFTER;
 
 /**
  * A {@linkplain Extension portable extension} normally instantiated
@@ -179,7 +185,7 @@ public class JpaExtension implements Extension {
     }
   }
 
-  private final void afterBeanDiscovery(@Observes final AfterBeanDiscovery event, final BeanManager beanManager)
+  private final void afterBeanDiscovery(@Observes @Priority(LIBRARY_AFTER) final AfterBeanDiscovery event, final BeanManager beanManager)
     throws IOException, JAXBException, ReflectiveOperationException, XMLStreamException {
     if (event != null && beanManager != null) {
 
@@ -207,7 +213,7 @@ public class JpaExtension implements Extension {
       // Collect all pre-existing PersistenceUnitInfo beans and make
       // sure their associated PersistenceProviders are beanified.
       // (Many times this Set will be empty.)
-      final Set<Bean<?>> preexistingPersistenceUnitInfoBeans = beanManager.getBeans(PersistenceUnitInfo.class);
+      final Set<Bean<?>> preexistingPersistenceUnitInfoBeans = beanManager.getBeans(PersistenceUnitInfo.class, Any.Literal.INSTANCE);
       if (preexistingPersistenceUnitInfoBeans != null && !preexistingPersistenceUnitInfoBeans.isEmpty()) {
         for (final Bean<?> preexistingPersistenceUnitInfoBean : preexistingPersistenceUnitInfoBeans) {
           if (preexistingPersistenceUnitInfoBean != null) {
