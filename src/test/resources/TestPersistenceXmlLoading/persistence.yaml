@@ -1,12 +1,11 @@
-units:
-  - name: "test"
-    transaction-type: "RESOURCE_LOCAL"
-    jdbc:
-      driver: "org.h2.Driver"
-      url: "jdbc:h2:mem:test"
-      user: "sa"
-      password: ""
-  - name: "fred"
-    classes:
-      - "com.foobar.Frob"
-      - "com.foobar.Baz"
+- name: "test"
+  transaction-type: "RESOURCE_LOCAL"
+  jdbc:
+    driver: "org.h2.Driver"
+    url: "jdbc:h2:mem:test"
+    user: "sa"
+    password: ""
+- name: "fred"
+  classes:
+    - "com.foobar.Frob"
+    - "com.foobar.Baz"

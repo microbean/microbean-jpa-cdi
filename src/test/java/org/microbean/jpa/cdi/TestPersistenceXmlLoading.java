@@ -16,12 +16,14 @@
  */
 package org.microbean.jpa.cdi;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 import java.net.URL;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import javax.persistence.spi.PersistenceUnitInfo;
@@ -70,22 +72,25 @@ public class TestPersistenceXmlLoading {
   public void testLoadingYaml() throws IOException {
     final URL url = Thread.currentThread().getContextClassLoader().getResource(this.getClass().getSimpleName() + "/persistence.yaml");
     final Yaml yaml = new Yaml();
-    try (final InputStream inputStream = url.openStream()) {
-      final Map<String, Object> data = yaml.load(inputStream);
+    try (final InputStream inputStream = new BufferedInputStream(url.openStream())) {
+      final Collection<? extends Map<? extends String, ?>> data = yaml.load(inputStream);
       assertNotNull(data);
-      assertEquals(1, data.size());
-      assertTrue(data.containsKey("units"));
-      @SuppressWarnings("unchecked")
-      final Collection<Map<String, Object>> units = (Collection<Map<String, Object>>)data.get("units");
-      assertNotNull(units);
-      assertEquals(2, units.size());
-      for (final Map<String, Object> unit : units) {
+      assertEquals(2, data.size());
+      for (final Map<? extends String, ?> unit : data) {
         assertNotNull(unit);
         assertTrue(unit.containsKey("name"));
+        final URL root = new URL(url, "..");
+        @SuppressWarnings("unchecked")
+        final Collection<? extends String> managedClasses = (Collection<? extends String>)unit.get("classes");
+        final PersistenceUnitInfoBean bean = new PersistenceUnitInfoBean((String)unit.get("name"),
+                                                                         root,
+                                                                         managedClasses,
+                                                                         new BeanManagerBackedDataSourceProvider(null), // wouldn't work in reality; just need a non-null value here
+                                                                         null);
       }
     }
   }
-
+    
   @Test
   public void testUrlNormalization() throws IOException {
     final URL url = new URL("file:/foo/META-INF/persistence.xml");

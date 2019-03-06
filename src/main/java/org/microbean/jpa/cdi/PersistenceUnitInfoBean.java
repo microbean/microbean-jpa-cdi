@@ -175,7 +175,7 @@ public class PersistenceUnitInfoBean implements PersistenceUnitInfo {
    * {@link PersistenceUnitInfoBean} represents; must not be {@code
    * null}
    *
-   * @param persitenceUnitRootUrl the {@link URL} identifying the root
+   * @param persistenceUnitRootUrl the {@link URL} identifying the root
    * of the persistence unit this {@link PersistenceUnitInfoBean}
    * represents; must not be {@code null}
    *
